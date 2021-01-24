@@ -13,7 +13,7 @@ class SimpleMLPRegressor(base.BaseModel):
             model.add(tf.keras.layers.BatchNormalization())
             model.add(tf.keras.layers.Dropout(config['model']['drop_rate']))
 
-        self.model.add(tf.keras.layers.Dence(1))
+        model.add(tf.keras.layers.Dense(1))
 
         if config['optimizer']['optimizer'] == "sgd":
             optimizer = tf.keras.optimizers.SGD(
@@ -26,23 +26,25 @@ class SimpleMLPRegressor(base.BaseModel):
         
         model.compile(optimizer, loss=config['model']['loss'], metrics=config['model']['metrics'])
 
+        self.model = model
+
         self.config = config
 
     def _fit(self, train_x, train_y, val_x, val_y):
         reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
-            **self.config('reduce_lr')
+            **self.config['reduce_lr']
         )
         early_stopping = tf.keras.callbacks.EarlyStopping(
             **self.config['early_stopping']
         )
         history = self.model.fit(
-            train_x,
-            train_y,
+            train_x.values,
+            train_y.values,
             epochs=100000,
-            validation_data=(val_x, val_y),
+            validation_data=(val_x.values, val_y.values),
             batch_size=self.config['fit']['batch_size'],
             verbose=self.config['fit']['verbose'],
-            callbacks=[reduce_lr, early_stopping, tf.keras.callbacks.TerminateOnNaN(), wandb.keras.WandbCallback()],
+            callbacks=[reduce_lr, early_stopping,  wandb.keras.WandbCallback()],
         )
         return history
     
