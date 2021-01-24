@@ -6,7 +6,6 @@ import pandas as pd
 import yaml
 from yaml.tokens import ValueToken
 import data_loader
-from NNModels import SimpleMLPRegressor
 from sklearn.model_selection import KFold
 import os
 import numpy as np
@@ -65,7 +64,11 @@ if __name__ == "__main__":
         tr_y, val_y = train_y.iloc[train_idx], train_y.iloc[val_idx]
 
         if config["model-type"] == "SimpleMLPRegressor":
+            from NNModels import SimpleMLPRegressor
             model = SimpleMLPRegressor(config["param"])
+        elif config["model-type"] == " SimpleMLPClassifier":
+            from NNModels import SimpleMLPClassifier
+            model = SimpleMLPClassifier(config['param'])
         else:
             err_msg = "ignonre model types. received {}.".format(config["cv"]["method"])
             raise ValueError(err_msg)
@@ -86,7 +89,7 @@ if __name__ == "__main__":
     outputpath = "submit/{0:%Y-%m-%d %H:%M:%S}".format(now)
     os.mkdir(outputpath)
 
-    # sample_sub = pd.read_csv("data/raw/sample_submit.csv", header=None)
+    sample_sub = pd.read_csv("data/raw/sample_submit.csv", header=None)
 
-    # sample_sub[:, 1] = preds
-    # sample_sub.to_csv(outputpath + "/submit.csv", index=False)
+    sample_sub[:, 1] = preds
+    sample_sub.to_csv(outputpath + "/submit.csv", index=False)
