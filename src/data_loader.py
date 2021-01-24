@@ -9,6 +9,7 @@ def _load_data(full_path):
     for file in files:
         fe = pd.read_feather(file)
         df = pd.concat([df, fe], axis=1)
+    df.sort_index(axis=1, inplace=True)
     return df
 
 def load_data(file_dir):
