@@ -27,4 +27,3 @@ class BaseModel:
         pred = self._predict(test_x)
         return pred
 
-
