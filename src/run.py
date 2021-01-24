@@ -43,8 +43,12 @@ if __name__ == '__main__':
         tr_x, val_x = train_x.iloc[train_idx], train_x.iloc[val_idx]
         tr_y, val_y = train_y.iloc[train_idx], train_y.iloc[val_idx]
 
-        model = SimpleMLPRegressor(config["param"])
-
+        if config['model-type'] == 'SimpleMLPRegressor':
+            model = SimpleMLPRegressor(config["param"])
+        else:
+            err_msg = "ignonre model types. received {}.".format(config["cv"]["method"])
+            raise ValueError(err_msg)
+            
         history = model.fit(tr_x, tr_y, val_x, val_y)
 
         pred = model.predict(test)
