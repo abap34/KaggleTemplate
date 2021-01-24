@@ -22,7 +22,6 @@ if __name__ == '__main__':
 
     project_id = config.pop('wandb_project_id')
 
-
     data_dir = config['data']['path']
     print('[info] received {} as data dir. load it...'.format(data_dir))
 
@@ -46,7 +45,8 @@ if __name__ == '__main__':
 
     train_x = train.drop(config['data']['target'], axis=1)
     train_y = train[config['data']['target']]
-    
+    if config['task_type'] == 'classification':
+        train_y = pd.get_dummies(train_y)
     if np.sum(train_x.columns != test.columns):
         err_msg = 'Incorrect input. The train column and the test column must match.\n \
             train.columns = {} \n \
@@ -58,17 +58,24 @@ if __name__ == '__main__':
     val_preds = np.zeros(train_x.shape[0])
 
     for i, (train_idx, val_idx) in enumerate(kf.split(train_x)):
-        run_name = config['model-type'] + 'fold' + str(i + 1)
-        wandb.init(project=project_id, config=config['param'], reinit=True, name=run_name, tags=config['model-type'], group=config['run_name'])   
+        run_name = config['model-type'] + '-fold' + str(i + 1)
+        wandb.init(
+            project=project_id,
+            config=config['param'],
+            reinit=True,
+            name=run_name,
+            tags=config['model-type'],
+            group=config['run_name'],
+        )
         tr_x, val_x = train_x.iloc[train_idx], train_x.iloc[val_idx]
         tr_y, val_y = train_y.iloc[train_idx], train_y.iloc[val_idx]
 
         if config['model-type'] == 'SimpleMLPRegressor':
             from NNModels import SimpleMLPRegressor
+
             model = SimpleMLPRegressor(config['param'])
         elif config['model-type'] == 'SimpleMLPClassifier':
             from NNModels import SimpleMLPClassifier
-            train_y = pd.get_dummies(train_y)
             model = SimpleMLPClassifier(config['param'])
         else:
             err_msg = 'ignonre model types. received {}.'.format(config['model-type'])
