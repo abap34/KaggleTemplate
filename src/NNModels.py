@@ -11,7 +11,8 @@ class SimpleMLPRegressor(base.BaseModel):
         model.add(tf.keras.layers.Dropout(config['model']['input_drop_rate']))
         for unit in config['model']['units']:
             model.add(tf.keras.layers.Dense(unit, activation=config['model']['activation']))
-            model.add(tf.keras.layers.BatchNormalization())
+            if config['model']['batch_norm']:
+                model.add(tf.keras.layers.BatchNormalization())
             model.add(tf.keras.layers.Dropout(config['model']['drop_rate']))
 
         model.add(tf.keras.layers.Dense(1))
@@ -60,7 +61,8 @@ class SimpleMLPClassifier(base.BaseModel):
         model.add(tf.keras.layers.Dropout(config['model']['input_drop_rate']))
         for unit in config['model']['units']:
             model.add(tf.keras.layers.Dense(unit, activation=config['model']['activation']))
-            model.add(tf.keras.layers.BatchNormalization())
+            if config['model']['batch_norm']:
+                model.add(tf.keras.layers.BatchNormalization())
             model.add(tf.keras.layers.Dropout(config['model']['drop_rate']))
 
         model.add(tf.keras.layers.Dense(config['model']['n_class'], activation='softmax'))
