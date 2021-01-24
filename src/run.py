@@ -46,7 +46,7 @@ if __name__ == "__main__":
 
     train_x = train.drop(config["data"]["target"], axis=1)
     train_y = train[config["data"]["target"]]
-
+    
     if np.sum(train_x.columns != test.columns):
         err_msg = "Incorrect input. The train column and the test column must match.\n \
             train.columns = {} \n \
@@ -68,6 +68,7 @@ if __name__ == "__main__":
             model = SimpleMLPRegressor(config["param"])
         elif config["model-type"] == " SimpleMLPClassifier":
             from NNModels import SimpleMLPClassifier
+            train_y = tf.keras.utils.to_categorical(train_y, config['model']['n_class'])
             model = SimpleMLPClassifier(config['param'])
         else:
             err_msg = "ignonre model types. received {}.".format(config["cv"]["method"])
