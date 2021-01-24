@@ -17,7 +17,7 @@ class BaseModel:
             )
             raise ValueError(err_msg)
 
-        history = self._fit(self, train_x, train_y, val_x, val_y)
+        history = self._fit(train_x, train_y, val_x, val_y)
         return history
 
     def _predict(self, test_x):
