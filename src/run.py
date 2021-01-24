@@ -68,7 +68,7 @@ if __name__ == "__main__":
             model = SimpleMLPRegressor(config["param"])
         elif config["model-type"] == " SimpleMLPClassifier":
             from NNModels import SimpleMLPClassifier
-            train_y = tf.keras.utils.to_categorical(train_y, config['model']['n_class'])
+            train_y = pd.get_dummies(train_y)
             model = SimpleMLPClassifier(config['param'])
         else:
             err_msg = "ignonre model types. received {}.".format(config["cv"]["method"])
