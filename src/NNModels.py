@@ -17,16 +17,19 @@ class SimpleMLPRegressor(base.BaseModel):
 
         model.add(tf.keras.layers.Dense(1))
 
-        if config['optimizer']['optimizer'] == "sgd":
+        optimizer_type = config['optimizer']['optimizer']
+        optimizer_arg = {i:config['optimizer'][i] for i in config['optimizer'] if i != 'optimizer'}
+
+        if optimizer_type == "sgd":
             optimizer = tf.keras.optimizers.SGD(
-                lr=config['optimizer']['optimizer_lr'], decay=config['optimizer']['decay']
+                **optimizer_arg
             )
-        elif config['optimizer']['optimizer'] == "adam":
+        elif optimizer_type == "adam":
             optimizer = tf.keras.optimizers.Adam(
-                lr=config['optimizer']['optimizer_lr'], decay=config['optimizer']['decay']
+                **optimizer_arg
             )
         else:
-            err_msg = "ignore optimizer. passed {}".format(config['optimizer']['optimizer'])
+            err_msg = "ignore optimizer. passed {}".format(optimizer_type)
             raise ValueError(err_msg)
 
         
@@ -53,7 +56,7 @@ class SimpleMLPRegressor(base.BaseModel):
             callbacks=[reduce_lr, early_stopping,  wandb.keras.WandbCallback()],
         )
 
-    def _predict(self, test_x : pd.DataFrame) -> np.ndaaray:
+    def _predict(self, test_x : pd.DataFrame) -> np.ndarray:
         return self.model.predict(test_x.values)
 
 
@@ -69,16 +72,19 @@ class SimpleMLPClassifier(base.BaseModel):
 
         model.add(tf.keras.layers.Dense(config['model']['n_class'], activation='softmax'))
 
-        if config['optimizer']['optimizer'] == "sgd":
+        optimizer_type = config['optimizer']['optimizer']
+        optimizer_arg = {i:config['optimizer'][i] for i in config['optimizer'] if i != 'optimizer'}
+
+        if optimizer_type == "sgd":
             optimizer = tf.keras.optimizers.SGD(
-                lr=config['optimizer']['optimizer_lr'], decay=config['optimizer']['decay']
+                **optimizer_arg
             )
-        elif config['optimizer']['optimizer'] == "adam":
+        elif optimizer_type == "adam":
             optimizer = tf.keras.optimizers.Adam(
-                lr=config['optimizer']['optimizer_lr'], decay=config['optimizer']['decay']
+                **optimizer_arg
             )
         else:
-            err_msg = "ignore optimizer. passed {}".format(config['optimizer']['optimizer'])
+            err_msg = "ignore optimizer. passed {}".format(optimizer_type)
             raise ValueError(err_msg)
 
         model.compile(optimizer, loss=config['model']['loss'], metrics=config['model']['metrics'])
@@ -104,5 +110,5 @@ class SimpleMLPClassifier(base.BaseModel):
             callbacks=[reduce_lr, early_stopping,  wandb.keras.WandbCallback()],
         )
     
-    def _predict(self, test_x : pd.DataFrame) -> np.ndaaray:
+    def _predict(self, test_x : pd.DataFrame) -> np.ndarray:
         return self.model.predict(test_x.values)
