@@ -1,12 +1,12 @@
-from types import new_class
+from typing import Dict
 import base
 import tensorflow as tf
-import yaml
 import wandb
-
+import pandas as pd
+import numpy as np
 
 class SimpleMLPRegressor(base.BaseModel):
-    def __init__(self, config):
+    def __init__(self, config : Dict) -> None:
         model = tf.keras.Sequential()
         model.add(tf.keras.layers.Dropout(config['model']['input_drop_rate']))
         for unit in config['model']['units']:
@@ -25,6 +25,10 @@ class SimpleMLPRegressor(base.BaseModel):
             optimizer = tf.keras.optimizers.Adam(
                 lr=config['optimizer']['optimizer_lr'], decay=config['optimizer']['decay']
             )
+        else:
+            err_msg = "ignore optimizer. passed {}".format(config['optimizer']['optimizer'])
+            raise ValueError(err_msg)
+
         
         model.compile(optimizer, loss=config['model']['loss'], metrics=config['model']['metrics'])
 
@@ -32,14 +36,14 @@ class SimpleMLPRegressor(base.BaseModel):
 
         self.config = config
 
-    def _fit(self, train_x, train_y, val_x, val_y):
+    def _fit(self, train_x : pd.DataFrame , train_y : pd.DataFrame, val_x : pd.DataFrame, val_y : pd.DataFrame) -> None: 
         reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
             **self.config['reduce_lr']
         )
         early_stopping = tf.keras.callbacks.EarlyStopping(
             **self.config['early_stopping']
         )
-        history = self.model.fit(
+        self.model.fit(
             train_x.values,
             train_y.values,
             epochs=100000,
@@ -48,15 +52,13 @@ class SimpleMLPRegressor(base.BaseModel):
             verbose=self.config['fit']['verbose'],
             callbacks=[reduce_lr, early_stopping,  wandb.keras.WandbCallback()],
         )
-        return history
-    
-    def _predict(self, test_x):
-        return self.model.predict(test_x)
 
+    def _predict(self, test_x : pd.DataFrame) -> np.ndaaray:
+        return self.model.predict(test_x.values)
 
 
 class SimpleMLPClassifier(base.BaseModel):
-    def __init__(self, config):
+    def __init__(self, config : Dict) -> None:
         model = tf.keras.Sequential()
         model.add(tf.keras.layers.Dropout(config['model']['input_drop_rate']))
         for unit in config['model']['units']:
@@ -85,14 +87,14 @@ class SimpleMLPClassifier(base.BaseModel):
 
         self.config = config
 
-    def _fit(self, train_x, train_y, val_x, val_y):
+    def _fit(self, train_x : pd.DataFrame , train_y : pd.DataFrame, val_x : pd.DataFrame, val_y : pd.DataFrame) -> None: 
         reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
             **self.config['reduce_lr']
         )
         early_stopping = tf.keras.callbacks.EarlyStopping(
             **self.config['early_stopping']
         )
-        history = self.model.fit(
+        self.model.fit(
             train_x.values,
             train_y.values,
             epochs=100000,
@@ -101,7 +103,6 @@ class SimpleMLPClassifier(base.BaseModel):
             verbose=self.config['fit']['verbose'],
             callbacks=[reduce_lr, early_stopping,  wandb.keras.WandbCallback()],
         )
-        return history
     
-    def _predict(self, test_x):
-        return self.model.predict(test_x)
+    def _predict(self, test_x : pd.DataFrame) -> np.ndaaray:
+        return self.model.predict(test_x.values)
