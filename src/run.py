@@ -45,8 +45,9 @@ if __name__ == '__main__':
 
     train_x = train.drop(config['data']['target'], axis=1)
     train_y = train[config['data']['target']]
-    if config['task_type'] == 'classification':
+    if config['task_type'] == 'multiclassification' and config['model-type'] == 'NN':
         train_y = pd.get_dummies(train_y)
+    
     if np.sum(train_x.columns != test.columns):
         err_msg = 'Incorrect input. The train column and the test column must match.\n \
             train.columns = {} \n \
@@ -57,8 +58,13 @@ if __name__ == '__main__':
     preds = np.zeros(test.shape[0])
     val_preds = np.zeros(train_x.shape[0])
 
+    print('[info] start run... \n \
+            train_x.shape = {} \n \
+            train_y.shape = {} \n \
+            test.shape = {}'.format(train_x.shape, train_y.shape, test.shape))
+            
     for i, (train_idx, val_idx) in enumerate(kf.split(train_x)):
-        run_name = config['model-type'] + '-fold' + str(i + 1)
+        run_name = config['model-name'] + '-fold' + str(i + 1)
         wandb.init(
             project=project_id,
             config=config['param'],
@@ -70,15 +76,15 @@ if __name__ == '__main__':
         tr_x, val_x = train_x.iloc[train_idx], train_x.iloc[val_idx]
         tr_y, val_y = train_y.iloc[train_idx], train_y.iloc[val_idx]
 
-        if config['model-type'] == 'SimpleMLPRegressor':
+        if config['model-name'] == 'SimpleMLPRegressor':
             from NNModels import SimpleMLPRegressor
 
             model = SimpleMLPRegressor(config['param'])
-        elif config['model-type'] == 'SimpleMLPClassifier':
+        elif config['model-name'] == 'SimpleMLPClassifier':
             from NNModels import SimpleMLPClassifier
             model = SimpleMLPClassifier(config['param'])
         else:
-            err_msg = 'ignonre model types. received {}.'.format(config['model-type'])
+            err_msg = 'ignonre model types. received {}.'.format(config['model-name'])
             raise ValueError(err_msg)
 
         model.fit(tr_x, tr_y, val_x, val_y)
@@ -95,7 +101,7 @@ if __name__ == '__main__':
     outputpath = 'submit/{0:%Y-%m-%d %H:%M:%S}'.format(now)
     os.mkdir(outputpath)
 
-    sample_sub = pd.read_csv('data/raw/sample_submittion.csv', header=None)
+    sample_sub = pd.read_csv('data/raw/sample_submition.csv', header=None)
 
     sample_sub[:, 1] = preds
     sample_sub.to_csv(outputpath + '/submit.csv', index=False)
