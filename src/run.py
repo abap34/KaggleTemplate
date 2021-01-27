@@ -20,12 +20,13 @@ if __name__ == '__main__':
     with open(args.config) as file:
         config = yaml.safe_load(file)
 
-    project_id = config.pop('wandb_project_id')
+    project_id = config.pop('project-id')
+    project_tags = config.pop('tags')
 
     data_dir = config['data']['path']
     print('[info] received {} as data dir. load it...'.format(data_dir))
 
-    train, test = data_loader.load_data(data_dir)
+    train, target, test = data_loader.load_data(data_dir)
 
     if train.columns.size == 0 or test.columns.size == 0:
         err_msg = 'empty dataframe. Is that a correct path?'
@@ -43,12 +44,13 @@ if __name__ == '__main__':
         )
         raise ValueError(err_msg)
 
-    train_x = train.drop(config['data']['target'], axis=1)
-    train_y = train[config['data']['target']]
-    if config['task_type'] == 'multiclassification' and config['model-type'] == 'NN':
-        train_y = pd.get_dummies(train_y)
+    # train = train.drop(config['data']['target'], axis=1)
+    # target = train[config['data']['target']]
+
+    # if config['task_type'] == 'multiclassification' and config['model-type'] == 'NN':
+    #     target = pd.get_dummies(target)
     
-    if np.sum(train_x.columns != test.columns):
+    if np.sum(train.columns != test.columns):
         err_msg = 'Incorrect input. The train column and the test column must match.\n \
             train.columns = {} \n \
             test.columns = {}'.format(
@@ -56,38 +58,38 @@ if __name__ == '__main__':
         )
         raise ValueError(err_msg)
     preds = np.zeros(test.shape[0])
-    val_preds = np.zeros(train_x.shape[0])
+    val_preds = np.zeros(train.shape[0])
 
     print('[info] start run... \n \
-            train_x.shape = {} \n \
-            train_y.shape = {} \n \
-            test.shape = {}'.format(train_x.shape, train_y.shape, test.shape))
+            train.shape = {} \n \
+            target.shape = {} \n \
+            test.shape = {}'.format(train.shape, target.shape, test.shape))
             
-    for i, (train_idx, val_idx) in enumerate(kf.split(train_x)):
-        run_name = config['model-name'] + '-fold' + str(i + 1)
+    for i, (train_idx, val_idx) in enumerate(kf.split(train)):
+        run_name = 'fold' + str(i + 1)
         wandb.init(
             project=project_id,
             config=config['param'],
             reinit=True,
             name=run_name,
-            tags=config['model-type'],
-            group=config['run_name'],
+            tags=project_tags,
+            group=config['run-id'],
         )
-        tr_x, val_x = train_x.iloc[train_idx], train_x.iloc[val_idx]
-        tr_y, val_y = train_y.iloc[train_idx], train_y.iloc[val_idx]
+        train_x, val_x = train.iloc[train_idx], train.iloc[val_idx]
+        train_y, val_y = target.iloc[train_idx], target.iloc[val_idx]
 
-        if config['model-name'] == 'SimpleMLPRegressor':
+        if config['model'] == 'SimpleMLPRegressor':
             from NNModels import SimpleMLPRegressor
 
             model = SimpleMLPRegressor(config['param'])
-        elif config['model-name'] == 'SimpleMLPClassifier':
+        elif config['model'] == 'SimpleMLPClassifier':
             from NNModels import SimpleMLPClassifier
             model = SimpleMLPClassifier(config['param'])
         else:
-            err_msg = 'ignonre model types. received {}.'.format(config['model-name'])
+            err_msg = 'ignonre model types. received {}.'.format(config['model'])
             raise ValueError(err_msg)
 
-        model.fit(tr_x, tr_y, val_x, val_y)
+        model.fit(train_x, train_y, val_x, val_y)
 
         pred = model.predict(test)
         val_pred = model.predict(val_x)
@@ -101,7 +103,7 @@ if __name__ == '__main__':
     outputpath = 'submit/{0:%Y-%m-%d %H:%M:%S}'.format(now)
     os.mkdir(outputpath)
 
-    sample_sub = pd.read_csv('data/raw/sample_submition.csv', header=None)
+    sample_sub = pd.read_csv('data/raw/sample_submission.csv', header=None)
 
     sample_sub[:, 1] = preds
     sample_sub.to_csv(outputpath + '/submit.csv', index=False)
