@@ -1,109 +1,41 @@
-import argparse
-from traitlets.traitlets import Undefined
 import wandb
-import datetime
-import pandas as pd
-import yaml
-from yaml.tokens import ValueToken
-import data_loader
-from sklearn.model_selection import KFold
-import os
 import numpy as np
+import pandas as pd
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('config')
-    args = parser.parse_args()
 
-    print('[info] received {} as config file. load it...'.format(args.config))
+class Runner:
+    # Runner:
+    # __init__(self, config):
+    # configに渡すもの
+    # cvの切り方(train_x, train_y, train_id, n_fold)を受け取ってtrain_idx, val_idxを返すもの。
+    # base.BaseModelを継承したモデル
+    # wandbのconfig
+    def __init__(self, split_method, wandb_config):
+        self.split_method = split_method
+        self.wandb_config = wandb_config
 
-    with open(args.config) as file:
-        config = yaml.safe_load(file)
+    def run_cv(self, model, train_x: pd.DataFrame, train_y: pd.DataFrame, train_id=None, test_x=None, n_fold=4,):
+        if test_x is not None:
+            preds = pd.DataFrame(np.zeros((test_x.shape[0], n_fold)),
+                                 columns=list(map(lambda fold: "fold_" + str(fold), range(n_fold))))
 
-    project_id = config.pop('project-id')
-    project_tags = config.pop('tags')
+        split_idxes = self.split_method(train_x, train_y, train_id, n_fold)
+        for i, (train_idx, val_idx) in split_idxes:
+            self.wandb_config['name'] = 'fold' + str(i + 1)
+            wandb.init(
+                self.wandb_config
+            )
+            tr_x = train_x.iloc[train_idx]
+            tr_y = train_y.iloc[train_idx]
+            val_x = train_x.iloc[val_idx]
+            val_y = train_y.iloc[val_idx]
+            model.fit(tr_x, tr_y, val_x, val_y)
 
-    data_dir = config['data']['path']
-    print('[info] received {} as data dir. load it...'.format(data_dir))
+            if test_x is not None:
+                pred = model.predict(test_x)
+                preds.iloc[:, i] = pred
 
-    train, target, test = data_loader.load_data(data_dir)
+        if test_x is not None:
+            return preds
 
-    if train.columns.size == 0 or test.columns.size == 0:
-        err_msg = 'empty dataframe. Is that a correct path?'
-        raise ValueError(err_msg)
 
-    if config['cv']['method'] == 'KFold':
-        kf = KFold(
-            n_splits=config['cv']['n_fold'],
-            shuffle=True,
-            random_state=config['cv']['random_state'],
-        )
-    else:
-        err_msg = 'ignonre split fold method. received {}.'.format(
-            config['cv']['method']
-        )
-        raise ValueError(err_msg)
-
-    # train = train.drop(config['data']['target'], axis=1)
-    # target = train[config['data']['target']]
-
-    # if config['task_type'] == 'multiclassification' and config['model-type'] == 'NN':
-    #     target = pd.get_dummies(target)
-    
-    if np.sum(train.columns != test.columns):
-        err_msg = 'Incorrect input. The train column and the test column must match.\n \
-            train.columns = {} \n \
-            test.columns = {}'.format(
-            train.columns, test.columns
-        )
-        raise ValueError(err_msg)
-    preds = np.zeros(test.shape[0])
-    val_preds = np.zeros(train.shape[0])
-
-    print('[info] start run... \n \
-            train.shape = {} \n \
-            target.shape = {} \n \
-            test.shape = {}'.format(train.shape, target.shape, test.shape))
-            
-    for i, (train_idx, val_idx) in enumerate(kf.split(train)):
-        run_name = 'fold' + str(i + 1)
-        wandb.init(
-            project=project_id,
-            config=config['param'],
-            reinit=True,
-            name=run_name,
-            tags=project_tags,
-            group=config['run-id'],
-        )
-        train_x, val_x = train.iloc[train_idx], train.iloc[val_idx]
-        train_y, val_y = target.iloc[train_idx], target.iloc[val_idx]
-
-        if config['model'] == 'SimpleMLPRegressor':
-            from NNModels import SimpleMLPRegressor
-
-            model = SimpleMLPRegressor(config['param'])
-        elif config['model'] == 'SimpleMLPClassifier':
-            from NNModels import SimpleMLPClassifier
-            model = SimpleMLPClassifier(config['param'])
-        else:
-            err_msg = 'ignonre model types. received {}.'.format(config['model'])
-            raise ValueError(err_msg)
-
-        model.fit(train_x, train_y, val_x, val_y)
-
-        pred = model.predict(test)
-        val_pred = model.predict(val_x)
-        val_preds[val_idx] = val_pred[:, 0]
-        preds += pred[:, 0]
-
-    preds /= config['cv']['n_fold']
-
-    now = datetime.datetime.now()
-
-    outputpath = 'submit/{0:%Y-%m-%d %H:%M:%S}'.format(now)
-    os.mkdir(outputpath)
-
-    sample_sub = pd.read_csv('data/raw/sample_submission.csv', header=None)
-
-    sample_sub[:, 1] = preds
-    sample_sub.to_csv(outputpath + '/submit.csv', index=False)
