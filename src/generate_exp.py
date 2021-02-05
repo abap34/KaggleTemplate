@@ -7,6 +7,7 @@ def build_exp_dir(out_path):
     os.makedirs(out_path)
     os.chdir(out_path)
     os.makedirs('data/input')
+    shutil.copytree('data/raw')
     os.makedirs('data/output')
     os.makedirs('src/preprocess.py')
     os.makedirs('src/run.py')
